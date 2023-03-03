@@ -7,10 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,40 +22,30 @@ public class EntidadController {
     private EntidadImp entidadImp;
 
     @GetMapping("/all")
-    public List<Entidad> getAll(){
-        List<Entidad> listEntidad = null;
-        try {
-            listEntidad = entidadImp.listar();
-        }catch (Exception e){
-            //return new HttpResponse<Entidad>(HttpStatus.CONFLICT);
-        }
-        return listEntidad;
+    public List<Entidad> getAll()  {
+        return entidadImp.listar();
     }
 
     @GetMapping("/all/filter")
-    public  Optional<List<Entidad>> getAllActivo(@RequestParam("isActive") Boolean active){
+    public  List<Entidad> getAllActivo(@RequestParam("isActive") Boolean active){
         log.info(" Método getAllActivo, recibió el valor de : "+active);
 
-        Optional<List<Entidad>> listEntidad = null;
-        try {
-            listEntidad = entidadImp.findByEstado(active);
-        }catch (Exception e){
-            System.out.println("e: "+e);
-        }
-        return listEntidad;
+        return entidadImp
+                .findByEstado(active)
+                .orElseThrow( () ->
+                        new MissingHeaderInfoException("Ocurrió un error al filtrar" +
+                                " con estado "+ active));
     }
 
     @GetMapping("/{id}")
     public Optional<Entidad> getOne(@PathVariable Long id){
         log.info(" Método getOne, recibió el valor de : "+id);
 
-        Optional<Entidad> entidad = null;
-        try {
-            entidad = entidadImp.buscarPorId(id);
-        }catch (Exception e){
-
-        }
-        return entidad;
+        return Optional.ofNullable(entidadImp.buscarPorId(id)
+                .orElseThrow(
+                        () -> new MissingHeaderInfoException("Ocurrió un error al " +
+                                "buscar por el id  " +
+                                id)));
     }
 
     @PostMapping("/")
@@ -71,25 +58,32 @@ public class EntidadController {
         return "";
     }
 
+
+
     @GetMapping("all/search")
-    public Optional<List<Entidad>> searchNroDocumentoOrRazonSocial(@RequestParam("search") String search){
+    public Optional<List<Entidad>> searchNroDocumentoOrRazonSocial(
+            @RequestParam("search") String search){
         log.info(" Método search, recibió el valor de : "+search);
-        Optional<List<Entidad>> x = entidadImp.findByLikeNroDocumentoOrRazonSocial(search);
-        return  x;
+        return Optional.ofNullable(entidadImp
+                .findByLikeNroDocumentoOrRazonSocial(search)
+                .orElseThrow(
+                        () ->
+                        new MissingHeaderInfoException("Ocurrió un error al buscar con la palabra " +
+                                search )));
     }
 
     @PutMapping("/{id}")
-    public String update(
+    public void update(
             @RequestBody Entidad entidad,
             @PathVariable Long id){
         log.info(" Método update, recibió el id: "+id);
 
         Entidad entidadBD = entidadImp.buscarPorId(id)
                 .orElseThrow( () ->
-                        new MissingHeaderInfoException("El id enviado en la petición " +
+                        new MissingHeaderInfoException("No se pudo " +
+                                "actualizar, debido que el id enviado en la petición " +
                                 "con valor de "+ id +" no existe."));
         entidadImp.actualizar(entidad, entidadBD);
-        return  "";
     }
 
     @DeleteMapping("/{id}")
